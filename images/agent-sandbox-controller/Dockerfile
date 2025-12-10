@@ -1,4 +1,5 @@
 ARG GO_VERSION="1.25.3"
+ARG BASE_IMAGE="gcr.io/distroless/static-debian13:nonroot"
 
 # Build go binaries
 # See https://github.com/golang/go/issues/69255#issuecomment-2523276831
@@ -24,7 +25,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build -ldflags="-s -w" -o /
 
 
 # The controller image
-FROM gcr.io/distroless/static-debian13:nonroot
+FROM ${BASE_IMAGE}
 
 COPY --from=builder /agent-sandbox-controller /agent-sandbox-controller
 

@@ -11,7 +11,6 @@ build-docker-image:
     - |
       docker buildx build --platform linux/amd64,linux/arm64 \
         --tag "$IMAGE_REF" \
-        --file images/agent-sandbox-controller/Dockerfile \
         --build-arg BASE_IMAGE=registry.ddbuild.io/images/base/gbi-ubuntu_2204:release \
         --label target=prod \
         --label CI_PIPELINE_ID="$CI_PIPELINE_ID" \

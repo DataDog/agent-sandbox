@@ -34,7 +34,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
@@ -486,6 +485,8 @@ func (r *SandboxReconciler) handleSandboxExpiry(ctx context.Context, sandbox *sa
 		allErrors = errors.Join(allErrors, fmt.Errorf("failed to delete service: %w", err))
 	}
 
+	// Clear all status fields explicitly
+	sandbox.Status = sandboxv1alpha1.SandboxStatus{}
 	// Update status to remove Ready condition
 	meta.SetStatusCondition(&sandbox.Status.Conditions, metav1.Condition{
 		Type:               string(sandboxv1alpha1.SandboxConditionReady),
@@ -494,9 +495,6 @@ func (r *SandboxReconciler) handleSandboxExpiry(ctx context.Context, sandbox *sa
 		Reason:             "SandboxExpired",
 		Message:            "Sandbox has expired",
 	})
-
-	sandbox.Status.Replicas = 0
-	sandbox.Status.LabelSelector = ""
 
 	return allErrors
 }
@@ -541,7 +539,7 @@ func (r *SandboxReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&sandboxv1alpha1.Sandbox{}).
-		Watches(&corev1.Pod{}, &handler.EnqueueRequestForObject{}, builder.WithPredicates(labelSelectorPredicate)).
-		Watches(&corev1.Service{}, &handler.EnqueueRequestForObject{}, builder.WithPredicates(labelSelectorPredicate)).
+		Owns(&corev1.Pod{}, builder.WithPredicates(labelSelectorPredicate)).
+		Owns(&corev1.Service{}, builder.WithPredicates(labelSelectorPredicate)).
 		Complete(r)
 }

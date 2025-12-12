@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/google/uuid"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	k8errors "k8s.io/apimachinery/pkg/api/errors"
@@ -37,6 +38,7 @@ import (
 
 const (
 	poolLabel              = "agents.x-k8s.io/pool"
+	poolPodIdLabel         = "agents.x-k8s.io/pod-pool-id"
 	sandboxTemplateRefHash = "agents.x-k8s.io/sandbox-template-ref-hash"
 )
 
@@ -237,7 +239,7 @@ func (r *SandboxWarmPoolReconciler) createPoolPod(ctx context.Context, warmPool 
 		Spec: template.Spec.PodTemplate.Spec,
 	}
 
-	// pod.Labels[podNameLabel] = sandboxcontrollers.NameHash(pod.Name)
+	pod.Labels[poolPodIdLabel] = uuid.New().String()
 
 	// Set controller reference so the Pod is owned by the SandboxWarmPool
 	if err := ctrl.SetControllerReference(warmPool, pod, r.Client.Scheme()); err != nil {

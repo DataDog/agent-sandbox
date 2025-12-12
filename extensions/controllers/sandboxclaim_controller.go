@@ -213,9 +213,30 @@ func (r *SandboxClaimReconciler) tryAdoptPodFromPool(ctx context.Context, claim 
 		return nil, nil
 	}
 
-	// Sort pods by creation timestamp (oldest first)
+	// Sort pods:
+	// 1. Ready pods first
+	// 2. Oldest pods first (CreationTimestamp)
 	sort.Slice(podList.Items, func(i, j int) bool {
-		return podList.Items[i].CreationTimestamp.Before(&podList.Items[j].CreationTimestamp)
+		podI := &podList.Items[i]
+		podJ := &podList.Items[j]
+
+		isReady := func(p *corev1.Pod) bool {
+			for _, cond := range p.Status.Conditions {
+				if cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue {
+					return true
+				}
+			}
+			return false
+		}
+
+		readyI := isReady(podI)
+		readyJ := isReady(podJ)
+
+		if readyI != readyJ {
+			return readyI // if I is ready (true) and J is not (false), I comes first (true)
+		}
+
+		return podI.CreationTimestamp.Before(&podJ.CreationTimestamp)
 	})
 
 	// Get the first available pod
@@ -254,7 +275,19 @@ func (r *SandboxClaimReconciler) createSandbox(ctx context.Context, claim *exten
 			Name:      claim.Name,
 		},
 	}
-	sandbox.Spec.PodTemplate = template.Spec.PodTemplate
+
+	template.Spec.PodTemplate.DeepCopyInto(&sandbox.Spec.PodTemplate)
+	// TODO: this is a workaround, remove replica assignment related issue #202
+	replicas := int32(1)
+	sandbox.Spec.Replicas = &replicas
+	// Enforce a secure-by-default policy by disabling the automatic mounting
+	// of the service account token, adhering to security best practices for
+	// sandboxed environments.
+	if sandbox.Spec.PodTemplate.Spec.AutomountServiceAccountToken == nil {
+		automount := false
+		sandbox.Spec.PodTemplate.Spec.AutomountServiceAccountToken = &automount
+	}
+
 	if err := controllerutil.SetControllerReference(claim, sandbox, r.Scheme); err != nil {
 		err = fmt.Errorf("failed to set controller reference for sandbox: %w", err)
 		logger.Error(err, "Error creating sandbox for claim: %q", claim.Name)

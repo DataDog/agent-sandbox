@@ -426,8 +426,10 @@ func (r *SandboxClaimReconciler) createSandbox(ctx context.Context, claim *exten
 	logger.Info("creating sandbox from template", "template", template.Name)
 	sandbox := &v1alpha1.Sandbox{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: claim.Namespace,
-			Name:      claim.Name,
+			Namespace:   claim.Namespace,
+			Name:        claim.Name,
+			Annotations: claim.Annotations,
+			Labels:      claim.Labels,
 		},
 	}
 

@@ -2,6 +2,8 @@ module sigs.k8s.io/agent-sandbox/dev/tools
 
 go 1.25.7
 
+toolchain go1.26.2
+
 tool (
 	github.com/golangci/golangci-lint/cmd/golangci-lint
 	gotest.tools/gotestsum
